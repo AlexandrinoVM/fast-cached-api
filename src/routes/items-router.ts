@@ -1,8 +1,6 @@
 import express from 'express'
 
-
 const Itemrouter = express.Router()
-
 
 Itemrouter.post('/itens',(req,res)=>{
     res.send('Item Created')
