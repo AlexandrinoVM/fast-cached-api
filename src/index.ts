@@ -18,6 +18,6 @@ app.use(cors({
 app.use('/api',Itemrouter)
 
 app.listen(PORT,()=>{
-    console.log('servidor rodando com sucesso:'+hostname+':'+PORT)
+    console.log(`server running: ${hostname}:${PORT}`)
 })
 
