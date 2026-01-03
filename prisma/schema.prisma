@@ -7,8 +7,10 @@ generator cliente {
     provider = "prisma-client-js"
 } 
 
-model Itens {
+model itens {
     id Int @id @default(autoincrement())
     id_item Int @unique 
     name String @unique 
+    price Float
+    description String
 }
