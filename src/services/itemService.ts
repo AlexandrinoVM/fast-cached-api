@@ -27,12 +27,12 @@ export class ItemService {
         return User.rows[0]
     }
 
-    static async ListItemsn(){
+    static async ListItems(){
         const result =await pool.query("SELECT id,name,id_item from itens") 
-        return result
+        return result.rows
     }
 
-    static async listById(id:Number){
+    static async listById(id:number){
         const cacheKey = `item:${id}`
 
         //try get from the redis cache
@@ -46,25 +46,33 @@ export class ItemService {
         const dbiten = await pool.query("SELECT id,name,id_item from itens where id_item = ($1)",[id])
         if(dbiten.rowCount != 0){
             console.log("returned by db")
-            await redis.set(cacheKey,JSON.stringify(dbiten),{EX:300})
-            return dbiten.rows[0]
+            const item = dbiten.rows[0]
+            await redis.set(cacheKey,JSON.stringify(item),{EX:300})
+            return item
         }
 
 
         //fetch direct from the api
         const getItemApi = await fetch(`https://fakestoreapi.com/products/${id}`)
         if(!getItemApi.ok){
-            console.log("returned by cache")
             return null
         }
         const product:Product = await getItemApi.json() 
 
         //set new iten to the cache and in the database
-        await redis.set(cacheKey,JSON.stringify(product),{EX:300})
         await this.CreateItem(product) 
+        await redis.set(cacheKey,JSON.stringify(product),{EX:300})
 
         console.log('returned by external api')
         return product
-
     }
+    
+    static async deleteItems(id:number){
+        const result = await pool.query('DELETE FROM itens where id = $1',[id]) 
+        if(result.rowCount != 0){
+            redis.del(`item:${id}`)
+        }
+        return
+    }
+
 }
