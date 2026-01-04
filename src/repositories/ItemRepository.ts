@@ -9,8 +9,12 @@ export class ItemRespository {
         description:string
     ){
         const item = await pool.query(`INSERT into itens (name,id_item,price,description) 
-VALUES ($1,$2,$3,$4) RETURNING id,name,id_item,price,description`,[title,id,price,description]) 
+VALUES ($1,$2,$3,$4) ON CONFLICT (id_item) DO NOTHING RETURNING id,name,id_item,price,description`,[title,id,price,description]) 
+        if(item.rows.length > 0){
         return item.rows[0]
+        }
+        const existing = await this.ListById(id)
+        return existing
     } 
 
     async List(){
