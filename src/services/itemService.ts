@@ -1,7 +1,9 @@
 import { Response,Request } from "express"
 import pool from "../db/pg_client.js"
-import redis, { connectRedis } from "../db/redis_client.js"
+import Redis, { connectRedis } from "../db/redis_client.js"
 import { ItemRespository } from "../repositories/ItemRepository.js";
+import { throws } from "node:assert";
+import { FakeStoreClient } from "../gateways/fakestore/FakeStoreCleint.js";
 export interface ItemInterFaceDTO{
     name:string,
     id:number
@@ -21,59 +23,57 @@ export interface Product {
 }
 
 export class ItemService {
-    static async CreateItem(data:Product){
+    constructor(private repo:ItemRespository,
+                private cache:typeof Redis,
+                private externalApi:FakeStoreClient
+                ){}
+    async CreateItem(data:Product){
         const {id,title,price,description} = data 
-        const item = await ItemRespository.Create(id,title,price,description) 
+
+        const item = await this.repo.Create(id,title,price,description) 
         return item
     }
 
-    static async ListItems(){
-        const result = await ItemRespository.List()  
+    async ListItems(){
+        const result = await this.repo.List()  
         return result
     }
 
-    static async listById(id:number){
+    async listById(id:number){
         const cacheKey = `item:${id}`
-
+        
         //try get from the redis cache
-        const cached = await redis.get(cacheKey) 
+        const cached = await this.cache.get(cacheKey) 
         if(cached){
-            console.log("returned by cache")
             return JSON.parse(cached)
         }        
 
         //try get from the database 
-        const item=await ItemRespository.ListById(id) 
+        const item=await this.repo.ListById(id) 
         if(item){
-            console.log("returned by db")
-            await redis.set(cacheKey,JSON.stringify(item),{EX:300})
+            await this.cache.set(cacheKey,JSON.stringify(item),{EX:300})
             return item
         }
-
-
         //fetch direct from the api
-        const getItemApi = await fetch(`https://fakestoreapi.com/products/${id}`)
-        if(!getItemApi.ok){
+        const product = await this.externalApi.getProduct(id) 
+        if(!product){
             return null
         }
-        const product:Product = await getItemApi.json() 
 
         //set new iten to the cache and in the database
-        const created = await ItemRespository.Create(product.id,
+        const created = await this.repo.Create(product.id,
         product.title,
         product.price,
         product.description
         ) 
-        await redis.set(cacheKey,JSON.stringify(created),{EX:300})
-
-        console.log('returned by external api')
+        await this.cache.set(cacheKey,JSON.stringify(created),{EX:300})
         return created 
     }
     
-    static async deleteItems(id:number){
-        const result =await ItemRespository.Delete(id) 
+    async deleteItems(id:number){
+        const result =await this.repo.Delete(id) 
         if(result){
-            redis.del(`item:${id}`)
+            this.cache.del(`item:${id}`)
         }
         return
     }

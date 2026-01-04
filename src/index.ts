@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import Itemrouter from './routes/items-router.js'
-import { connectRedis } from './db/redis_client.js'
+import Redis, { connectRedis } from './db/redis_client.js'
 
 const PORT = process.env.PORT || 3000
 const hostname= process.env.HOSTNAME || 'http://localhost'

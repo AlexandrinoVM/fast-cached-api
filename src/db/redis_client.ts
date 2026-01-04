@@ -1,30 +1,30 @@
 import { createClient } from "redis";
 import "dotenv/config";
 
-const redis = createClient({
+const Redis = createClient({
   url: process.env.REDIS_URL,
 });
 
-redis.on("connect", () => {
+Redis.on("connect", () => {
   console.log("Redis connected");
 });
 
-redis.on("error", (err: Error) => {
+Redis.on("error", (err: Error) => {
   console.error("Redis error:", err.message);
 });
 
 // conecta UMA VEZ
 export async function connectRedis() {
-  if (!redis.isOpen) {
-    await redis.connect();
+  if (!Redis.isOpen) {
+    await Redis.connect();
   }
 }
 
 export async function disconnectRedis() {
-  if (redis.isOpen) {
-    await redis.quit();
+  if (Redis.isOpen) {
+    await Redis.quit();
   }
 }
 
-export default redis;
+export default Redis;
 
